@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import heroImg from './assets/hero.png'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
@@ -7,6 +7,14 @@ import './App.css'
 function App() {
   const [count, setCount] = useState(0)
 
+  // test code for displaying server side information.
+  useEffect(() => {
+    fetch("http://localhost:8000/orders")
+      .then((res) => res.json())
+      .then((data) => console.log(data))
+      .catch(console.error);
+  }, []);
+  
   return (
     <>
       <section id="center">
