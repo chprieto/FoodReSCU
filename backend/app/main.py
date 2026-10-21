@@ -7,7 +7,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Adjust this to your frontend URL in production
+    allow_origins=["http://localhost:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -19,5 +19,4 @@ test_orders = [
 
 @app.get("/orders")
 async def get_products():
-    # FastAPI automatically serializes this list of instances into a JSON array
     return test_orders
