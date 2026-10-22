@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from order import ReservedOrder
 
 class User(BaseModel):
     username: str
@@ -9,4 +10,4 @@ class Staff(User):
 
 class Student(User):
     student_id: str
-    reserved_orders: int
+    reserved_orders: list[ReservedOrder]
