@@ -1,5 +1,10 @@
 from pydantic import BaseModel
-from order import ReservedOrder
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from order import Order
+
+
 
 class User(BaseModel):
     username: str
@@ -10,4 +15,4 @@ class Staff(User):
 
 class Student(User):
     student_id: str
-    reserved_orders: list[ReservedOrder]
+    reserved_orders: list[Order]
