@@ -3,10 +3,6 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel, Field
 from enum import Enum
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from user import Student
-
 
 
 class Status(str, Enum):
@@ -24,7 +20,7 @@ class Order(BaseModel):
     time_made: datetime = Field(default_factory=datetime.now)
     order_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     time_reserved: datetime | None = None
-    reserved_by: Student | None  = None
+    reserved_by: str | None  = None
     status: Status = Status.UPCOMING
 
     def get_time_active(self):
@@ -34,7 +30,7 @@ class Order(BaseModel):
         if self.status == Status.UPCOMING and self.get_time_active() >= ACTIVE_TIME:
             self.status = Status.ACTIVE
 
-    def reserve(self, reserved_by: Student):
+    def reserve(self, reserved_by: str):
         #return ReservedOrder(item=self.item, time_made=self.time_made, reserved_by=reserved_by)
         if self.status == Status.ACTIVE:
             self.status = Status.RESERVED
@@ -66,6 +62,10 @@ class OrderList():
         
         # will need more error checking code here in the future, for notifying frontend removal has failed
         return None
+
+    def get_order_by_id(self, target_id: uuid.UUID):
+        target = next((order for order in self.order_list if order.order_id == target_id), None)
+        return target
 
     def get_length(self):
         return len(self.order_list)

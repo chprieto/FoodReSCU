@@ -1,8 +1,5 @@
+from __future__ import annotations
 from pydantic import BaseModel
-
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from order import Order
 
 
 
@@ -15,4 +12,4 @@ class Staff(User):
 
 class Student(User):
     student_id: str
-    reserved_orders: list[Order]
+    reserved_orders: list[str]
