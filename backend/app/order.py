@@ -29,6 +29,8 @@ class Order(BaseModel):
     def activate(self):
         if self.status == Status.UPCOMING and self.get_time_active() >= ACTIVE_TIME:
             self.status = Status.ACTIVE
+            return True
+        return False
 
     def reserve(self, reserved_by: str):
         #return ReservedOrder(item=self.item, time_made=self.time_made, reserved_by=reserved_by)
@@ -36,24 +38,35 @@ class Order(BaseModel):
             self.status = Status.RESERVED
             self.reserved_by = reserved_by
             self.time_reserved = datetime.now()
+            return True
+        return False
 
     def pick_up(self):
         if self.status == Status.RESERVED:
             self.status = Status.PICKED_UP
+            return True
+        return False
 
     def set_old(self):
         if self.status != Status.PICKED_UP and self.get_time_active() >= OLD_TIME:
             self.status = Status.OLD
+            return True
+        return False
 
 
 class OrderList():
     def __init__(self, expected_status: Status):
         self.order_list: list[Order] = []
         self.expected_status = expected_status
+    
+    def __iter__(self):
+        return iter(self.order_list)
 
     def add_order(self, order: Order):
         if self.expected_status == order.status:
             self.order_list.append(order)
+            return True
+        return False
     
     def remove_order(self, order: Order):
         if order in self.order_list:

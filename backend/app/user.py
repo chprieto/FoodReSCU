@@ -1,5 +1,6 @@
 from __future__ import annotations
 from pydantic import BaseModel
+import uuid
 
 
 
@@ -12,4 +13,4 @@ class Staff(User):
 
 class Student(User):
     student_id: str
-    reserved_orders: list[str]
+    reserved_orders: list[uuid.UUID] = []
