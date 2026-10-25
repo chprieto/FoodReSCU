@@ -96,6 +96,113 @@ class TestSystem(unittest.TestCase):
         self.assertEqual(self.system.upcoming_list.get_length(), 1)
         self.assertEqual(self.system.active_list.get_length(), 0)
 
+    def test_verify_registered_users(self):
+        self.assertTrue(self.system.verify_student(self.student))
+        self.assertTrue(self.system.verify_staff(self.staff))
+
+    def test_verify_unknown_users(self):
+        stranger = Student(username="ghost", password="nope", student_id="GHOST", reserved_orders=[])
+        outsider = Staff(username="outsider", password="nope", staff_id="OUT")
+        self.assertFalse(self.system.verify_student(stranger))
+        self.assertFalse(self.system.verify_staff(outsider))
+
+    def test_incoming_order_starts_upcoming(self):
+        self.system.incoming_order("Chili")
+        self.assertEqual(self.system.upcoming_list.get_length(), 1)
+        stored = list(self.system.upcoming_list)[0]
+        self.assertEqual(stored.item, "Chili")
+        self.assertEqual(stored.status, Status.UPCOMING)
+
+    def test_activate_order_success(self):
+        order = Order(item="Chili", time_made=datetime.now() - timedelta(hours=1, minutes=5))
+        self.system.upcoming_list.add_order(order)
+
+        self.assertTrue(self.system.activate_order(order, self.staff))
+        self.assertEqual(order.status, Status.ACTIVE)
+        self.assertEqual(self.system.upcoming_list.get_length(), 0)
+        self.assertEqual(self.system.active_list.get_order_by_id(order.order_id), order)
+
+    def test_activate_order_unauthorized_staff(self):
+        outsider = Staff(username="outsider", password="nope", staff_id="OUT")
+        order = Order(item="Chili", time_made=datetime.now() - timedelta(hours=2))
+        self.system.upcoming_list.add_order(order)
+
+        self.assertFalse(self.system.activate_order(order, outsider))
+        self.assertEqual(order.status, Status.UPCOMING)
+        self.assertEqual(self.system.upcoming_list.get_length(), 1)
+        self.assertEqual(self.system.active_list.get_length(), 0)
+
+    def test_reserve_order_unknown_student(self):
+        stranger = Student(username="ghost", password="nope", student_id="GHOST", reserved_orders=[])
+        order = Order(item="Chili", status=Status.ACTIVE)
+        self.system.active_list.add_order(order)
+
+        self.assertFalse(self.system.reserve_order(order, stranger))
+        self.assertEqual(order.status, Status.ACTIVE)
+        self.assertIsNone(order.reserved_by)
+        self.assertEqual(self.system.active_list.get_length(), 1)
+        self.assertEqual(self.system.reserved_list.get_length(), 0)
+
+    def test_pick_up_missing_from_reserved_list(self):
+        order = Order(item="Chili", status=Status.RESERVED, reserved_by=self.student.student_id)
+        self.student.reserved_orders.append(order.order_id)
+
+        self.assertFalse(self.system.pick_up_order(order, self.student))
+        self.assertEqual(order.status, Status.RESERVED)
+        self.assertIn(order.order_id, self.student.reserved_orders)
+
+    def test_second_reserve_rejected_while_first_is_open(self):
+        # Verification compares the whole student record, which still has an
+        # empty reservation list after the caller records the first order.
+        first = Order(item="Chili", status=Status.ACTIVE)
+        second = Order(item="Soup", status=Status.ACTIVE)
+        self.system.active_list.add_order(first)
+        self.system.active_list.add_order(second)
+
+        self.assertTrue(self.system.reserve_order(first, self.student))
+        self.assertFalse(self.system.reserve_order(second, self.student))
+        self.assertEqual(second.status, Status.ACTIVE)
+        self.assertEqual(self.system.active_list.get_length(), 1)
+        self.assertEqual(len(self.student.reserved_orders), 1)
+
+    def test_set_orders_as_old_moves_expired(self):
+        expired = Order(
+            item="Old Soup",
+            time_made=datetime.now() - timedelta(hours=4),
+            status=Status.ACTIVE,
+        )
+        self.system.active_list.add_order(expired)
+
+        self.system.set_orders_as_old()
+
+        self.assertEqual(expired.status, Status.OLD)
+        self.assertEqual(self.system.active_list.get_length(), 0)
+        self.assertEqual(self.system.old_list.get_order_by_id(expired.order_id), expired)
+
+    def test_set_orders_as_old_keeps_recent(self):
+        recent = Order(
+            item="Fresh Soup",
+            time_made=datetime.now() - timedelta(minutes=20),
+            status=Status.ACTIVE,
+        )
+        self.system.active_list.add_order(recent)
+
+        self.system.set_orders_as_old()
+
+        self.assertEqual(recent.status, Status.ACTIVE)
+        self.assertEqual(self.system.active_list.get_length(), 1)
+        self.assertEqual(self.system.old_list.get_length(), 0)
+
+    def test_large_batch_of_incoming_orders(self):
+        for index in range(100):
+            self.system.incoming_order(f"item-{index}")
+
+        self.assertEqual(self.system.upcoming_list.get_length(), 100)
+        self.assertEqual(self.system.active_list.get_length(), 0)
+        stored = list(self.system.upcoming_list)
+        self.assertEqual(stored[0].item, "item-0")
+        self.assertEqual(stored[-1].item, "item-99")
+
 
 if __name__ == "__main__":
     unittest.main()
