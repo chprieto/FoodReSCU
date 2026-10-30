@@ -16,6 +16,7 @@ class System():
     def add_student(self, username: str, password: str, student_id: str):
         new_student = Student(username=username, password=password, student_id=student_id)
         self.student_list.append(new_student)
+        return new_student
 
     def add_staff(self, username: str, password: str, staff_id: str):
         new_staff = Staff(username=username, password=password, staff_id=staff_id)

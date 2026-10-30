@@ -33,7 +33,6 @@ class Order(BaseModel):
         return False
 
     def reserve(self, reserved_by: str):
-        #return ReservedOrder(item=self.item, time_made=self.time_made, reserved_by=reserved_by)
         if self.status == Status.ACTIVE:
             self.status = Status.RESERVED
             self.reserved_by = reserved_by
@@ -82,12 +81,3 @@ class OrderList():
 
     def get_length(self):
         return len(self.order_list)
-
-    
-
-
-"""class ReservedOrder(Order):
-    reserved_by: str
-
-    def unreserve(self):
-        return Order(item=self.item, time_made=self.time_made)"""
