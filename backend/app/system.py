@@ -1,5 +1,6 @@
 from order import Order, OrderList, Status, OLD_TIME
 from user import Student, Staff
+import uuid
 
 class System():
     def __init__(self):
@@ -13,14 +14,26 @@ class System():
         self.staff_list: [Staff] = []
 
     #potentially consolidate these functions into one, depends on if more distinct features are added to user classes
-    def add_student(self, username: str, password: str, student_id: str):
+    def add_student(self, username: str, password: str, student_id: str = None):
+        if student_id is None:
+            student_id = uuid.uuid4().hex
+        elif next((student for student in self.student_list if student.student_id == student_id), None) is not None:
+            return None
+
         new_student = Student(username=username, password=password, student_id=student_id)
         self.student_list.append(new_student)
         return new_student
 
-    def add_staff(self, username: str, password: str, staff_id: str):
+    def add_staff(self, username: str, password: str, staff_id: str = None):
+        if staff_id is None:
+            staff_id = uuid.uuid4().hex
+        elif next((staff for staff in self.staff_list if staff.staff_id == staff_id), None) is not None:
+            return None
+
         new_staff = Staff(username=username, password=password, staff_id=staff_id)
         self.staff_list.append(new_staff)
+
+        return new_staff
 
     def verify_student(self, student: Student):
         return student in self.student_list

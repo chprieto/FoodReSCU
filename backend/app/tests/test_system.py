@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+import uuid
 from datetime import datetime, timedelta
 
 # Ensure backend/app directory is in sys.path
@@ -16,9 +17,9 @@ class TestSystem(unittest.TestCase):
     def setUp(self):
         self.system = System()
         self.student = Student(username="student1", password="password123", student_id="STU001", reserved_orders=[])
-        self.system.add_student("student1", "password123", "STU001")
+        self.added_student = self.system.add_student("student1", "password123", "STU001")
         self.staff = Staff(username="staff1", password="password123", staff_id="STAFF001")
-        self.system.add_staff("staff1", "password123", "STAFF001")
+        self.added_staff = self.system.add_staff("staff1", "password123", "STAFF001")
 
     # 1. Normal Case: Student successfully reserves an active order
     def test_reserve_order_success(self):
@@ -54,7 +55,9 @@ class TestSystem(unittest.TestCase):
     # 3. Known Incorrect Case: Unauthorized student attempts to pick up someone else's order
     def test_pick_up_order_unauthorized_student(self):
         other_student = Student(username="student2", password="password456", student_id="STU002", reserved_orders=[])
-        self.system.add_student("student2", "password456", "STU002")
+        added_other = self.system.add_student("student2", "password456", "STU002")
+        self.assertIsNotNone(added_other)
+        self.assertEqual(added_other.student_id, "STU002")
 
         order = Order(item="Pizza", status=Status.ACTIVE)
         self.system.active_list.add_order(order)
@@ -99,6 +102,10 @@ class TestSystem(unittest.TestCase):
     def test_verify_registered_users(self):
         self.assertTrue(self.system.verify_student(self.student))
         self.assertTrue(self.system.verify_staff(self.staff))
+        self.assertIsNotNone(self.added_student)
+        self.assertIsNotNone(self.added_staff)
+        self.assertEqual(self.added_student.student_id, "STU001")
+        self.assertEqual(self.added_staff.staff_id, "STAFF001")
 
     def test_verify_unknown_users(self):
         stranger = Student(username="ghost", password="nope", student_id="GHOST", reserved_orders=[])
@@ -202,6 +209,103 @@ class TestSystem(unittest.TestCase):
         stored = list(self.system.upcoming_list)
         self.assertEqual(stored[0].item, "item-0")
         self.assertEqual(stored[-1].item, "item-99")
+
+    # =========================================================================
+    # Tests for new add_student and add_staff features
+    # =========================================================================
+
+    # Normal Case: add_student returns the created Student object and adds it to student_list
+    def test_add_student_success_returns_student(self):
+        new_student = self.system.add_student("alex", "pass123", "STU099")
+        self.assertIsNotNone(new_student)
+        self.assertIsInstance(new_student, Student)
+        self.assertEqual(new_student.username, "alex")
+        self.assertEqual(new_student.password, "pass123")
+        self.assertEqual(new_student.student_id, "STU099")
+        self.assertIn(new_student, self.system.student_list)
+        self.assertTrue(self.system.verify_student(new_student))
+
+    # Normal Case: add_staff returns the created Staff object and adds it to staff_list
+    def test_add_staff_success_returns_staff(self):
+        new_staff = self.system.add_staff("jordan", "pass456", "STAFF099")
+        self.assertIsNotNone(new_staff)
+        self.assertIsInstance(new_staff, Staff)
+        self.assertEqual(new_staff.username, "jordan")
+        self.assertEqual(new_staff.password, "pass456")
+        self.assertEqual(new_staff.staff_id, "STAFF099")
+        self.assertIn(new_staff, self.system.staff_list)
+        self.assertTrue(self.system.verify_staff(new_staff))
+
+    # Known Incorrect Case: duplicate student_id rejected and returns None
+    def test_add_student_duplicate_id_rejected(self):
+        initial_count = len(self.system.student_list)
+        duplicate = self.system.add_student("imposter", "otherpass", "STU001")
+        self.assertIsNone(duplicate)
+        self.assertEqual(len(self.system.student_list), initial_count)
+        # Ensure original student data is preserved
+        existing = next(s for s in self.system.student_list if s.student_id == "STU001")
+        self.assertEqual(existing.username, "student1")
+
+    # Known Incorrect Case: duplicate staff_id rejected and returns None
+    def test_add_staff_duplicate_id_rejected(self):
+        initial_count = len(self.system.staff_list)
+        duplicate = self.system.add_staff("imposter", "otherpass", "STAFF001")
+        self.assertIsNone(duplicate)
+        self.assertEqual(len(self.system.staff_list), initial_count)
+        # Ensure original staff data is preserved
+        existing = next(s for s in self.system.staff_list if s.staff_id == "STAFF001")
+        self.assertEqual(existing.username, "staff1")
+
+    # Edge Case: student_id=None automatically generates a valid 32-character hex UUID
+    def test_add_student_auto_generates_id_when_none(self):
+        student = self.system.add_student("auto_student", "autopass", None)
+        self.assertIsNotNone(student)
+        self.assertIsInstance(student, Student)
+        self.assertEqual(student.username, "auto_student")
+        self.assertIsInstance(student.student_id, str)
+        self.assertEqual(len(student.student_id), 32)
+        # Verify valid UUID hex format
+        parsed_uuid = uuid.UUID(hex=student.student_id)
+        self.assertEqual(parsed_uuid.hex, student.student_id)
+        self.assertIn(student, self.system.student_list)
+        self.assertTrue(self.system.verify_student(student))
+
+    # Edge Case: staff_id=None automatically generates a valid 32-character hex UUID
+    def test_add_staff_auto_generates_id_when_none(self):
+        staff = self.system.add_staff("auto_staff", "autopass", None)
+        self.assertIsNotNone(staff)
+        self.assertIsInstance(staff, Staff)
+        self.assertEqual(staff.username, "auto_staff")
+        self.assertIsInstance(staff.staff_id, str)
+        self.assertEqual(len(staff.staff_id), 32)
+        # Verify valid UUID hex format
+        parsed_uuid = uuid.UUID(hex=staff.staff_id)
+        self.assertEqual(parsed_uuid.hex, staff.staff_id)
+        self.assertIn(staff, self.system.staff_list)
+        self.assertTrue(self.system.verify_staff(staff))
+
+    # Edge Case: omitting student_id / staff_id uses default None and generates UUID
+    def test_add_user_with_omitted_id_parameter(self):
+        student = self.system.add_student("omitted_stu", "pass123")
+        staff = self.system.add_staff("omitted_stf", "pass456")
+        self.assertIsNotNone(student)
+        self.assertIsNotNone(staff)
+        self.assertEqual(len(student.student_id), 32)
+        self.assertEqual(len(staff.staff_id), 32)
+        self.assertIn(student, self.system.student_list)
+        self.assertIn(staff, self.system.staff_list)
+
+    # Edge Case: multiple auto-generated IDs are unique
+    def test_add_multiple_auto_id_users_generate_unique_ids(self):
+        student_a = self.system.add_student("user_a", "pass_a", None)
+        student_b = self.system.add_student("user_b", "pass_b", None)
+        staff_a = self.system.add_staff("staff_a", "pass_a", None)
+        staff_b = self.system.add_staff("staff_b", "pass_b", None)
+
+        self.assertNotEqual(student_a.student_id, student_b.student_id)
+        self.assertNotEqual(staff_a.staff_id, staff_b.staff_id)
+        self.assertEqual(len(self.system.student_list), 3)  # setUp student + 2 auto
+        self.assertEqual(len(self.system.staff_list), 3)    # setUp staff + 2 auto
 
 
 if __name__ == "__main__":
