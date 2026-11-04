@@ -51,3 +51,31 @@ def get_student_orders(student_id: str):
         "available": available_orders,
         "my_reservations": my_reservations,
     }
+
+@app.post("/orders/{order_id}/reserve")
+def reserve_order_endpoint(order_id: uuid.UUID, payload: ReserveRequest):
+    # 1. Locate the active order
+    order = system.active_list.get_order_by_id(order_id)
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found or no longer active for reservation",
+        )
+    # 2. Locate the student
+    student = next(
+        (s for s in system.student_list if s.student_id == payload.student_id),
+        None,
+    )
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Student with ID '{payload.student_id}' not found",
+        )
+    # 3. Call your system method
+    success = system.reserve_order(order, student)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to reserve order",
+        )
+    return {"message": "Order reserved successfully", "order_id": order.order_id}
