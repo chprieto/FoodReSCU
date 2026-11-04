@@ -1,130 +1,123 @@
-import { useState, useEffect } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+import SignIn from './components/SignIn'
+import OrderCard from './components/OrderCard'
+import { useNow, useOrders } from './hooks'
+import { STATUS, uiStatus } from './orderStatus'
 
-function App() {
-  const [count, setCount] = useState(0)
+const USER_KEY = 'foodrescu.user'
 
-  // test code for displaying server side information.
-  useEffect(() => {
-    fetch("http://localhost:8000/orders")
-      .then((res) => res.json())
-      .then((data) => console.log(data))
-      .catch(console.error);
-  }, []);
-  
+const SECTIONS = [
+  { status: STATUS.AVAILABLE, title: 'Available to claim', staffTitle: 'Available to students' },
+  { status: STATUS.RESERVED, title: 'Reserved', staffTitle: 'Reserved' },
+  { status: STATUS.UPCOMING, title: 'Coming soon', staffTitle: 'Not yet available (under 1h)' },
+  { status: STATUS.PICKED_UP, title: 'Picked up', staffTitle: 'Picked up' },
+  { status: STATUS.OLD, title: 'Expired', staffTitle: 'Expired (3h+)' },
+]
+
+function loadUser() {
+  try {
+    return JSON.parse(localStorage.getItem(USER_KEY))
+  } catch {
+    return null
+  }
+}
+
+function Dashboard({ user, onSignOut }) {
+  const now = useNow()
+  const { orders, loading, refreshing, error, lastUpdated, nextRefreshAt, refresh } = useOrders(user)
+
+  const grouped = useMemo(() => {
+    const groups = Object.fromEntries(SECTIONS.map((s) => [s.status, []]))
+    // The backend already limits what each role receives (students: claimable + their own).
+    for (const order of orders) groups[uiStatus(order)].push(order)
+    // newest first
+    for (const list of Object.values(groups)) {
+      list.sort((a, b) => new Date(b.time_made) - new Date(a.time_made))
+    }
+    return groups
+  }, [orders])
+
+  const visibleCount = Object.values(grouped).reduce((n, l) => n + l.length, 0)
+  const isStaff = user.role === 'staff'
+  const secondsLeft = nextRefreshAt ? Math.max(0, Math.ceil((nextRefreshAt - now) / 1000)) : null
+
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="app">
+      <header className="topbar">
+        <div className="brand">
+          <span aria-hidden="true">🥡</span> FoodReSCU
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+        <div className="who">
+          <span className="chip">{isStaff ? 'Staff' : `Student · ${user.studentId}`}</span>
+          <button className="link" onClick={onSignOut}>Sign out</button>
+        </div>
+      </header>
+
+      <main className="content">
+        <div className="hero">
+          <h1>{isStaff ? 'All orders' : 'Free food near you'}</h1>
+          <p className="muted">
+            {isStaff
+              ? 'Every order, from fresh to expired.'
+              : 'Orders left uncollected for an hour are free to claim. They expire after 3 hours.'}
           </p>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+        <div className="statusbar" aria-live="polite">
+          <span className={`dot ${error ? 'bad' : 'ok'}`} />
+          <span>
+            {error
+              ? 'Can’t reach the server — showing last known orders'
+              : lastUpdated
+                ? `Updated ${new Date(lastUpdated).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}`
+                : 'Connecting…'}
+            {secondsLeft !== null && !refreshing && ` · refreshing in ${secondsLeft}s`}
+          </span>
+          <button className="link" onClick={refresh} disabled={refreshing}>
+            {refreshing ? 'Refreshing…' : 'Refresh now'}
+          </button>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        {error && <div className="banner">{error}</div>}
+
+        {loading ? (
+          <p className="empty">Loading orders…</p>
+        ) : visibleCount === 0 ? (
+          <div className="empty">
+            <div className="empty-icon" aria-hidden="true">🍽️</div>
+            <p>{isStaff ? 'No orders yet.' : 'Nothing to claim right now.'}</p>
+            <p className="muted">This page checks for new food every 30 seconds.</p>
+          </div>
+        ) : (
+          SECTIONS.map(({ status, title, staffTitle }) =>
+            grouped[status].length === 0 ? null : (
+              <section key={status} className="section">
+                <h2>
+                  {isStaff ? staffTitle : title}
+                  <span className="count">{grouped[status].length}</span>
+                </h2>
+                <ul className="grid">
+                  {grouped[status].map((order) => (
+                    <OrderCard key={order.order_id} order={order} status={status} now={now} user={user} />
+                  ))}
+                </ul>
+              </section>
+            ),
+          )
+        )}
+      </main>
+    </div>
   )
 }
 
-export default App
+export default function App() {
+  const [user, setUser] = useState(loadUser)
+
+  useEffect(() => {
+    if (user) localStorage.setItem(USER_KEY, JSON.stringify(user))
+    else localStorage.removeItem(USER_KEY)
+  }, [user])
+
+  return user ? <Dashboard user={user} onSignOut={() => setUser(null)} /> : <SignIn onSignIn={setUser} />
+}

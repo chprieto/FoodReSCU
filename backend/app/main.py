@@ -8,7 +8,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -29,6 +29,7 @@ system.reserve_order(order, student)
 @app.get("/staff/orders")
 def get_staff_orders():
     """Returns all orders grouped into divisions for the staff dashboard."""
+    system.refresh_order_statuses()
     return {
         "upcoming": list(system.upcoming_list),
         "active": list(system.active_list),
@@ -40,6 +41,7 @@ def get_staff_orders():
 @app.get("/student/orders")
 def get_student_orders(student_id: str):
     """Returns only available orders and orders reserved by this student."""
+    system.refresh_order_statuses()
     available_orders = list(system.active_list)
     my_reservations = [
         order for order in system.reserved_list 
