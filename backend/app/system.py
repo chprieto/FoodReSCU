@@ -132,3 +132,11 @@ class System():
         """Applies the time-based rules. Call before reading orders so clients never see stale statuses."""
         self.set_orders_as_old()  # first, so a 3h+ order skips the active list entirely
         self.activate_due_orders()
+
+    def find_orderlist(self, target_id: uuid.UUID):
+        orderlists = [self.upcoming_list, self.active_list, self.reserved_list, self.picked_up_list, self.old_list]
+        for orderlist in orderlists:
+            order = orderlist.get_order_by_id(target_id)
+            if order is not None:
+                return orderlist
+        return None

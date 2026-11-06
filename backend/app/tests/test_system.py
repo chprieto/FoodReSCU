@@ -307,6 +307,24 @@ class TestSystem(unittest.TestCase):
         self.assertEqual(len(self.system.student_list), 3)  # setUp student + 2 auto
         self.assertEqual(len(self.system.staff_list), 3)    # setUp staff + 2 auto
 
+    def test_find_orderlist(self):
+        order1 = Order(item="Burger", status=Status.ACTIVE)
+        order2 = Order(item="Fries", status=Status.OLD)
+        order3 = Order(item="Drink", status = Status.RESERVED)
+        self.system.active_list.add_order(order1)
+        self.system.old_list.add_order(order2)
+        self.assertEqual(self.system.upcoming_list.get_length(), 0)
+        self.assertEqual(self.system.active_list.get_length(), 1)
+        self.assertEqual(self.system.reserved_list.get_length(), 0)
+        self.assertEqual(self.system.picked_up_list.get_length(), 0)
+        self.assertEqual(self.system.old_list.get_length(), 1)
+        result1 = self.system.find_orderlist(order1.order_id)
+        self.assertEqual(result1, self.system.active_list)
+        result2 = self.system.find_orderlist(order2.order_id)
+        self.assertEqual(result2, self.system.old_list)
+        result3 = self.system.find_orderlist(order3.order_id)
+        self.assertEqual(result3, None)
+
 
 if __name__ == "__main__":
     unittest.main()
