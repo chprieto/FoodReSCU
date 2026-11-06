@@ -4,6 +4,7 @@ from system import System
 from order import Status, Order
 from user import Student
 import uuid
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -13,6 +14,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class ReserveRequest(BaseModel):
+    student_id: str
+
+class ActivateRequest(BaseModel):
+    staff_id: str
+
+class DeleteRequest(BaseModel):
+    staff_id: str
 
 system = System()
 student = system.add_student("student1", "password123", "STU001")
