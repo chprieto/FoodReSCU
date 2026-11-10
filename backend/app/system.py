@@ -1,4 +1,4 @@
-from order import Order, OrderList, Status, OLD_TIME
+from order import Order, OrderList, Status, ACTIVE_TIME, OLD_TIME
 from user import Student, Staff
 import uuid
 
@@ -115,3 +115,28 @@ class System():
         for order in reserved_orders:
             # notify student who reserved order!
             pass
+
+    def activate_due_orders(self):
+        """Moves upcoming orders that have waited out ACTIVE_TIME into the active list
+        (no staff action needed: this is the automatic 'free to claim' rule)."""
+        due_orders = [order for order in self.upcoming_list if order.get_time_active() >= ACTIVE_TIME]
+
+        for order in due_orders:
+            if order.activate():
+                self.upcoming_list.remove_order(order)
+                self.active_list.add_order(order)
+
+        return due_orders
+
+    def refresh_order_statuses(self):
+        """Applies the time-based rules. Call before reading orders so clients never see stale statuses."""
+        self.set_orders_as_old()  # first, so a 3h+ order skips the active list entirely
+        self.activate_due_orders()
+
+    def find_orderlist(self, target_id: uuid.UUID):
+        orderlists = [self.upcoming_list, self.active_list, self.reserved_list, self.picked_up_list, self.old_list]
+        for orderlist in orderlists:
+            order = orderlist.get_order_by_id(target_id)
+            if order is not None:
+                return orderlist
+        return None

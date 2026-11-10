@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timedelta
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 from enum import Enum
 
 
@@ -22,6 +22,12 @@ class Order(BaseModel):
     time_reserved: datetime | None = None
     reserved_by: str | None  = None
     status: Status = Status.UPCOMING
+
+    # Timestamps are naive server-local times internally. In JSON responses, attach the
+    # server's UTC offset so browsers in any timezone compute the correct age.
+    @field_serializer("time_made", "time_reserved", when_used="json")
+    def _serialize_time(self, value: datetime | None):
+        return value.astimezone().isoformat() if value else None
 
     def get_time_active(self):
         return datetime.now() - self.time_made
