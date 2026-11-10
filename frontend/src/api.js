@@ -10,6 +10,30 @@ async function getJson(path, signal) {
   return res.json()
 }
 
+async function postJson(path, body) {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    // FastAPI puts the human-readable reason in `detail`.
+    const err = await res.json().catch(() => null)
+    throw new Error(typeof err?.detail === 'string' ? err.detail : `Backend responded with ${res.status}`)
+  }
+  return res.json()
+}
+
+/** Student reserves an available order. Sends the order id and who is asking. */
+export function reserveOrder(orderId, studentId) {
+  return postJson(`/orders/${orderId}/reserve`, { student_id: studentId })
+}
+
+/** Student marks their reserved order as picked up. */
+export function pickUpOrder(orderId, studentId) {
+  return postJson(`/orders/${orderId}/pickup`, { student_id: studentId })
+}
+
 /**
  * Fetches the orders this user is allowed to see, as one flat list.
  *
@@ -31,5 +55,5 @@ export async function fetchOrders(user, signal) {
   }
 
   const data = await getJson(`/student/orders?student_id=${encodeURIComponent(user.studentId)}`, signal)
-  return [...data.available, ...data.my_reservations]
+  return [...data.available, ...data.my_reservations, ...(data.my_picked_up ?? [])]
 }

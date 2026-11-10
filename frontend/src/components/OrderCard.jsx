@@ -30,9 +30,10 @@ function detail(order, status, now) {
   }
 }
 
-export default function OrderCard({ order, status, now, user }) {
+export default function OrderCard({ order, status, now, user, busy, onReserve, onPickUp }) {
   const badge = BADGE[status]
-  const mine = user.role === 'student' && order.reserved_by === user.studentId
+  const isStudent = user.role === 'student'
+  const mine = isStudent && order.reserved_by === user.studentId
 
   return (
     <li className={`card ${status.toLowerCase()}`}>
@@ -45,6 +46,16 @@ export default function OrderCard({ order, status, now, user }) {
         Made {formatDuration(orderAgeMs(order, now))} ago
         {user.role === 'staff' && order.reserved_by && <> · reserved by {order.reserved_by}</>}
       </p>
+      {isStudent && status === STATUS.AVAILABLE && (
+        <button className="primary card-action" disabled={busy} onClick={() => onReserve(order)}>
+          {busy ? 'Reserving…' : 'Reserve'}
+        </button>
+      )}
+      {mine && status === STATUS.RESERVED && (
+        <button className="primary card-action" disabled={busy} onClick={() => onPickUp(order)}>
+          {busy ? 'Saving…' : 'Mark as picked up'}
+        </button>
+      )}
     </li>
   )
 }

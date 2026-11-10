@@ -68,6 +68,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(31, 138, 76,
 }
 .segmented button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
 
+.tabs { max-width: 420px; margin-bottom: 14px; background: rgba(0, 0, 0, 0.06); }
+
 .field { display: flex; flex-direction: column; gap: 6px; text-align: left; font-size: 0.85rem; font-weight: 600; }
 .field input {
   padding: 12px 14px;
@@ -167,6 +169,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(31, 138, 76,
 .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .card h3 { font-size: 1.1rem; }
 .detail { margin-top: 10px; font-weight: 600; }
+.card-action { margin-top: 12px; width: 100%; }
 .meta { margin-top: 4px; font-size: 0.82rem; color: var(--muted); }
 
 .badge {

@@ -1,9 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from system import System
 from order import Status, Order
 from user import Student
 import uuid
+from datetime import datetime, timedelta
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -32,6 +33,12 @@ system.incoming_order("Burger")
 system.incoming_order("Pizza")
 system.incoming_order("Rice")
 
+# Already-claimable orders (made 70 min ago) so students have something to reserve while testing
+for item in ("Pasta", "Salad", "Sandwich"):
+    system.active_list.add_order(
+        Order(item=item, status=Status.ACTIVE, time_made=datetime.now() - timedelta(minutes=70))
+    )
+
 order = Order(item="Burger", status=Status.ACTIVE)
 system.active_list.add_order(order)
 system.reserve_order(order, student)
@@ -58,9 +65,15 @@ def get_student_orders(student_id: str):
         order for order in system.reserved_list 
         if order.reserved_by == student_id
     ]
+    # Keep orders they already collected so they don't vanish from "Your orders".
+    my_picked_up = [
+        order for order in system.picked_up_list
+        if order.reserved_by == student_id
+    ]
     return {
         "available": available_orders,
         "my_reservations": my_reservations,
+        "my_picked_up": my_picked_up,
     }
 
 @app.post("/orders/{order_id}/reserve")
@@ -90,6 +103,34 @@ def reserve_order_endpoint(order_id: uuid.UUID, payload: ReserveRequest):
             detail="Failed to reserve order",
         )
     return {"message": "Order reserved successfully", "order_id": order.order_id}
+
+@app.post("/orders/{order_id}/pickup")
+def pick_up_order_endpoint(order_id: uuid.UUID, payload: ReserveRequest):
+    # 1. Locate the reserved order
+    order = system.reserved_list.get_order_by_id(order_id)
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found or not currently reserved",
+        )
+    # 2. Locate the student
+    student = next(
+        (s for s in system.student_list if s.student_id == payload.student_id),
+        None,
+    )
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Student with ID '{payload.student_id}' not found",
+        )
+    # 3. Only the student who reserved it may pick it up
+    success = system.pick_up_order(order, student)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This order is not reserved by you, kid. Sorry.",
+        )
+    return {"message": "Order picked up successfully", "order_id": order.order_id}
 
 @app.post("/orders/{order_id}/activate")
 def activate_order_endpoint(order_id: uuid.UUID, payload: ActivateRequest):
