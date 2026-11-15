@@ -34,6 +34,35 @@ export function pickUpOrder(orderId, studentId) {
   return postJson(`/orders/${orderId}/pickup`, { student_id: studentId })
 }
 
+/** Staff activates an upcoming order. */
+export function activateOrder(orderId, staffId) {
+  return postJson(`/orders/${orderId}/activate`, { staff_id: staffId })
+}
+
+/** Staff deletes an order from the system. */
+export function deleteOrder(orderId, staffId) {
+  return postJson(`/orders/${orderId}/delete`, { staff_id: staffId })
+}
+
+/** Register a new user (student or staff). */
+export function registerUser(username, password, role, idNumber = null) {
+  return postJson('/users/register', {
+    username,
+    password,
+    role,
+    id_number: idNumber,
+  })
+}
+
+/** Authenticate an existing user (student or staff). */
+export function loginUser(username, password, role) {
+  return postJson('/users/login', {
+    username,
+    password,
+    role,
+  })
+}
+
 /**
  * Fetches the orders this user is allowed to see, as one flat list.
  *
