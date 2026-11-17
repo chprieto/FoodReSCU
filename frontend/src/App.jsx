@@ -6,7 +6,8 @@ import { useNow, useOrders } from './hooks'
 import { pickUpOrder, reserveOrder } from './api'
 import { STATUS, uiStatus } from './orderStatus'
 
-const USER_KEY = 'foodrescu.user'
+// v2: sessions saved before the backend validated logins are dropped, so everyone signs in again.
+const USER_KEY = 'foodrescu.user.v2'
 
 // Students only: orders they reserved (and picked up), pinned above everything else.
 const MINE = 'MINE'
@@ -86,7 +87,7 @@ function Dashboard({ user, onSignOut }) {
           <span aria-hidden="true">🥡</span> FoodReSCU
         </div>
         <div className="who">
-          <span className="chip">{isStaff ? 'Staff' : `Student · ${user.studentId}`}</span>
+          <span className="chip">{isStaff ? `Staff · ${user.staffId}` : `Student · ${user.studentId}`}</span>
           <button className="link" onClick={onSignOut}>Sign out</button>
         </div>
       </header>

@@ -24,6 +24,24 @@ async function postJson(path, body) {
   return res.json()
 }
 
+/**
+ * Validates credentials with the backend. Resolves with the signed-in user, or throws
+ * an Error whose message is safe to show on the login page.
+ */
+export async function login({ role, id, password }) {
+  let data
+  try {
+    data = await postJson('/login', { role, id, password: role === 'staff' ? password : null })
+  } catch (err) {
+    // A TypeError means the request never reached the backend.
+    if (err instanceof TypeError) throw new Error('Can’t reach the server. Try again in a moment.')
+    throw err
+  }
+  return role === 'staff'
+    ? { role: 'staff', staffId: data.staff_id }
+    : { role: 'student', studentId: data.student_id }
+}
+
 /** Student reserves an available order. Sends the order id and who is asking. */
 export function reserveOrder(orderId, studentId) {
   return postJson(`/orders/${orderId}/reserve`, { student_id: studentId })

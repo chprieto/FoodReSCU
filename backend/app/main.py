@@ -6,6 +6,7 @@ from user import Student
 import uuid
 from datetime import datetime, timedelta
 from pydantic import BaseModel
+from typing import Literal
 
 app = FastAPI()
 
@@ -15,6 +16,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class LoginRequest(BaseModel):
+    role: Literal["student", "staff"]
+    id: str
+    password: str | None = None  # required for staff, not used for students
 
 class ReserveRequest(BaseModel):
     student_id: str
@@ -27,6 +33,8 @@ class DeleteRequest(BaseModel):
 
 system = System()
 student = system.add_student("student1", "password123", "STU001")
+# Demo staff account: sign in with staff ID STAFF001 / password staff123
+system.add_staff("staff1", "staff123", "STAFF001")
 
 # Test Data
 system.incoming_order("Burger")
@@ -42,6 +50,30 @@ for item in ("Pasta", "Salad", "Sandwich"):
 order = Order(item="Burger", status=Status.ACTIVE)
 system.active_list.add_order(order)
 system.reserve_order(order, student)
+
+
+@app.post("/login")
+def login(payload: LoginRequest):
+    """Checks the ID (and, for staff, the password) against the registered users."""
+    user_id = payload.id.strip()
+
+    if payload.role == "student":
+        found = next((s for s in system.student_list if s.student_id == user_id), None)
+        if not found:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid student ID",
+            )
+        return {"role": "student", "student_id": found.student_id}
+
+    found = next((s for s in system.staff_list if s.staff_id == user_id), None)
+    if not found or found.password != payload.password:
+        # Same message for both so it doesn't reveal which staff IDs exist.
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid staff ID or password",
+        )
+    return {"role": "staff", "staff_id": found.staff_id}
 
 
 @app.get("/staff/orders")
