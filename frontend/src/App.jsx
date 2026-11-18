@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+import lockup from './assets/scu-lockup.png'
 import SignIn from './components/SignIn'
 import OrderCard from './components/OrderCard'
 import { useNow, useOrders } from './hooks'
@@ -83,30 +84,24 @@ function Dashboard({ user, onSignOut }) {
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">
-          <span aria-hidden="true">🥡</span> FoodReSCU
-        </div>
-        <div className="who">
-          <span className="chip">{isStaff ? `Staff · ${user.staffId}` : `Student · ${user.studentId}`}</span>
-          <button className="link" onClick={onSignOut}>Sign out</button>
+        <div className="topbar-inner">
+          <div className="brand">
+            <img className="brand-logo" src={lockup} alt="Santa Clara University" />
+            <span className="brand-app">FoodReSCU</span>
+          </div>
+          <div className="who">
+            <span className="chip">{isStaff ? `Staff · ${user.staffId}` : `Student · ${user.studentId}`}</span>
+            <button className="signout" onClick={onSignOut}>Sign out</button>
+          </div>
         </div>
       </header>
 
-      <main className="content">
-        <div className="hero">
-          <h1>{isStaff ? 'All orders' : onMine ? 'My orders' : 'Free food near you'}</h1>
-          <p className="muted">
-            {isStaff
-              ? 'Every order, from fresh to expired.'
-              : onMine
-                ? 'Food you’ve reserved. Mark it as picked up once you have it.'
-                : 'Orders left uncollected for an hour are free to claim. They expire after 3 hours.'}
-          </p>
-        </div>
-
-        {!isStaff && (
-          <div className="segmented tabs" role="tablist" aria-label="Pages">
-            {[
+      <nav className="navbar" aria-label="Pages">
+        <div className="navbar-inner" role={isStaff ? undefined : 'tablist'}>
+          {isStaff ? (
+            <span className="nav-item on">All orders</span>
+          ) : (
+            [
               ['browse', 'Available food'],
               ['mine', `My orders (${grouped[MINE].length})`],
             ].map(([key, label]) => (
@@ -115,14 +110,35 @@ function Dashboard({ user, onSignOut }) {
                 type="button"
                 role="tab"
                 aria-selected={tab === key}
-                className={tab === key ? 'on' : ''}
+                className={`nav-item${tab === key ? ' on' : ''}`}
                 onClick={() => setTab(key)}
               >
                 {label}
               </button>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
+      </nav>
+
+      <main className="content">
+        <div className="hero">
+          <h1>
+            {isStaff ? (
+              <>All <em>orders</em></>
+            ) : onMine ? (
+              <>My <em>orders</em></>
+            ) : (
+              <>Free food, <em>near you</em></>
+            )}
+          </h1>
+          <p className="lede">
+            {isStaff
+              ? 'Every order, from fresh to expired.'
+              : onMine
+                ? 'Food you’ve reserved. Mark it as picked up once you have it.'
+                : 'Food left uncollected for an hour is free for Broncos to claim. It expires after 3 hours.'}
+          </p>
+        </div>
 
         <div className="statusbar" aria-live="polite">
           <span className={`dot ${error ? 'bad' : 'ok'}`} />
@@ -179,6 +195,11 @@ function Dashboard({ user, onSignOut }) {
           )
         )}
       </main>
+
+      <footer className="footer">
+        <span>Santa Clara University · FoodReSCU</span>
+        <span>Reducing campus food waste, one meal at a time.</span>
+      </footer>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { login } from '../api'
+import seal from '../assets/scu-seal.png'
 
 // Students sign in with their student ID; staff with a staff ID and password.
 // The backend validates both, and a bad login stops here with an error message.
@@ -36,9 +37,12 @@ export default function SignIn({ onSignIn }) {
   return (
     <main className="signin">
       <form className="signin-card" onSubmit={submit}>
-        <div className="logo" aria-hidden="true">🥡</div>
-        <h1>FoodReSCU</h1>
-        <p className="muted">Free leftover food, claimed before it goes to waste.</p>
+        <img className="seal" src={seal} alt="Santa Clara University seal" />
+        <div className="signin-heading">
+          <p className="eyebrow">Santa Clara University</p>
+          <h1>Food<em>ReSCU</em></h1>
+        </div>
+        <p className="muted">Free leftover campus food, claimed before it goes to waste. Sign in to see what’s available.</p>
 
         <div className="segmented" role="radiogroup" aria-label="I am a">
           {['student', 'staff'].map((r) => (
