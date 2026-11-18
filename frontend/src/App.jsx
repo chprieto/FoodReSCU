@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+import lockup from './assets/scu-lockup.png'
 import SignIn from './components/SignIn'
 import OrderCard from './components/OrderCard'
 import { useNow, useOrders } from './hooks'
-import { pickUpOrder, reserveOrder } from './api'
+import { deleteOrder, pickUpOrder, reserveOrder } from './api'
 import { STATUS, uiStatus } from './orderStatus'
 
-const USER_KEY = 'foodrescu.user'
+// v2: sessions saved before the backend validated logins are dropped, so everyone signs in again.
+const USER_KEY = 'foodrescu.user.v2'
 
 // Students only: orders they reserved (and picked up), pinned above everything else.
 const MINE = 'MINE'
@@ -35,13 +37,13 @@ function Dashboard({ user, onSignOut }) {
   const [busyId, setBusyId] = useState(null)
   const [actionError, setActionError] = useState(null)
 
-  // Sends the action to the backend with the order id + the signed-in student's id,
-  // then reloads so the card moves to its new section.
+  // Sends the action to the backend with the order id + the signed-in user's id
+  // (student ID or staff ID), then reloads so the card moves to its new section.
   async function runAction(order, request) {
     setBusyId(order.order_id)
     setActionError(null)
     try {
-      await request(order.order_id, user.studentId)
+      await request(order.order_id, user.role === 'staff' ? user.staffId : user.studentId)
     } catch (err) {
       setActionError(err.message || 'Could not complete that action')
     } finally {
@@ -51,6 +53,9 @@ function Dashboard({ user, onSignOut }) {
   }
   const onReserve = (order) => runAction(order, reserveOrder)
   const onPickUp = (order) => runAction(order, pickUpOrder)
+  const onDelete = (order) => {
+    if (window.confirm(`Delete "${order.item}"? This can't be undone.`)) runAction(order, deleteOrder)
+  }
 
   const grouped = useMemo(() => {
     const groups = Object.fromEntries(SECTIONS.map((s) => [s.status, []]))
@@ -82,30 +87,24 @@ function Dashboard({ user, onSignOut }) {
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">
-          <span aria-hidden="true">🥡</span> FoodReSCU
-        </div>
-        <div className="who">
-          <span className="chip">{isStaff ? 'Staff' : `Student · ${user.studentId}`}</span>
-          <button className="link" onClick={onSignOut}>Sign out</button>
+        <div className="topbar-inner">
+          <div className="brand">
+            <img className="brand-logo" src={lockup} alt="Santa Clara University" />
+            <span className="brand-app">FoodReSCU</span>
+          </div>
+          <div className="who">
+            <span className="chip">{isStaff ? `Staff · ${user.staffId}` : `Student · ${user.studentId}`}</span>
+            <button className="signout" onClick={onSignOut}>Sign out</button>
+          </div>
         </div>
       </header>
 
-      <main className="content">
-        <div className="hero">
-          <h1>{isStaff ? 'All orders' : onMine ? 'My orders' : 'Free food near you'}</h1>
-          <p className="muted">
-            {isStaff
-              ? 'Every order, from fresh to expired.'
-              : onMine
-                ? 'Food you’ve reserved. Mark it as picked up once you have it.'
-                : 'Orders left uncollected for an hour are free to claim. They expire after 3 hours.'}
-          </p>
-        </div>
-
-        {!isStaff && (
-          <div className="segmented tabs" role="tablist" aria-label="Pages">
-            {[
+      <nav className="navbar" aria-label="Pages">
+        <div className="navbar-inner" role={isStaff ? undefined : 'tablist'}>
+          {isStaff ? (
+            <span className="nav-item on">All orders</span>
+          ) : (
+            [
               ['browse', 'Available food'],
               ['mine', `My orders (${grouped[MINE].length})`],
             ].map(([key, label]) => (
@@ -114,14 +113,35 @@ function Dashboard({ user, onSignOut }) {
                 type="button"
                 role="tab"
                 aria-selected={tab === key}
-                className={tab === key ? 'on' : ''}
+                className={`nav-item${tab === key ? ' on' : ''}`}
                 onClick={() => setTab(key)}
               >
                 {label}
               </button>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
+      </nav>
+
+      <main className="content">
+        <div className="hero">
+          <h1>
+            {isStaff ? (
+              <>All <em>orders</em></>
+            ) : onMine ? (
+              <>My <em>orders</em></>
+            ) : (
+              <>Free food, <em>near you</em></>
+            )}
+          </h1>
+          <p className="lede">
+            {isStaff
+              ? 'Every order, from fresh to expired.'
+              : onMine
+                ? 'Food you’ve reserved. Mark it as picked up once you have it.'
+                : 'Food left uncollected for an hour is free for Broncos to claim. It expires after 3 hours.'}
+          </p>
+        </div>
 
         <div className="statusbar" aria-live="polite">
           <span className={`dot ${error ? 'bad' : 'ok'}`} />
@@ -170,6 +190,7 @@ function Dashboard({ user, onSignOut }) {
                       busy={busyId === order.order_id}
                       onReserve={onReserve}
                       onPickUp={onPickUp}
+                      onDelete={onDelete}
                     />
                   ))}
                 </ul>
@@ -178,6 +199,11 @@ function Dashboard({ user, onSignOut }) {
           )
         )}
       </main>
+
+      <footer className="footer">
+        <span>Santa Clara University · FoodReSCU</span>
+        <span>Reducing campus food waste, one meal at a time.</span>
+      </footer>
     </div>
   )
 }
