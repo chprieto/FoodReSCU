@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from system import System
 from order import Status, Order
@@ -8,8 +8,17 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel
 from typing import Literal
 
-app = FastAPI()
+from dependencies import system, get_system
+from routers import orders, users
+from schemas.order import ReserveRequest, ActivateRequest, DeleteRequest
 
+app = FastAPI(
+    title="FoodReSCU API",
+    description="API for FoodReSCU leftover food ordering and reservation management.",
+    version="1.0.0",
+)
+
+# CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
     # Any local dev port works (Vite moves to 5174, 5175... when 5173 is busy).
@@ -165,33 +174,6 @@ def pick_up_order_endpoint(order_id: uuid.UUID, payload: ReserveRequest):
         )
     return {"message": "Order picked up successfully", "order_id": order.order_id}
 
-@app.post("/orders/{order_id}/activate")
-def activate_order_endpoint(order_id: uuid.UUID, payload: ActivateRequest):
-    # 1. Locate the upcoming order
-    order = system.upcoming_list.get_order_by_id(order_id)
-    if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Order not found or no longer upcoming",
-        )
-    # 2. Locate the staff
-    staff = next(
-        (s for s in system.staff_list if s.staff_id == payload.staff_id),
-        None,
-    )
-    if not staff:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Staff with ID '{payload.staff_id}' not found",
-        )
-    # 3. Call the activate order system method
-    success = system.activate_order(order, staff)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to activate order",
-        )
-    return {"message": "Order activated successfully", "order_id": order.order_id}
 
 @app.post("/orders/{order_id}/delete")
 def delete_order_endpoint(order_id: uuid.UUID, payload: DeleteRequest):
