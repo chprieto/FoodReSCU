@@ -21,6 +21,17 @@ button:focus-visible, input:focus-visible {
 }
 .primary:hover:not(:disabled) { background: var(--crimson-dark); }
 
+.danger {
+  border: 1px solid var(--crimson);
+  border-radius: 6px;
+  padding: 10px 16px;
+  background: transparent;
+  color: var(--crimson);
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s;
+}
+.danger:hover:not(:disabled) { background: var(--crimson); color: #fff; }
+
 .link {
   border: 0;
   background: none;

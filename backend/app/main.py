@@ -12,7 +12,8 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    # Any local dev port works (Vite moves to 5174, 5175... when 5173 is busy).
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -196,7 +197,7 @@ def activate_order_endpoint(order_id: uuid.UUID, payload: ActivateRequest):
 def delete_order_endpoint(order_id: uuid.UUID, payload: DeleteRequest):
     # 1. Locate the order
     orderlist = system.find_orderlist(order_id)
-    order = orderlist.get_order_by_id(order_id)
+    order = orderlist.get_order_by_id(order_id) if orderlist else None
     if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -219,4 +220,8 @@ def delete_order_endpoint(order_id: uuid.UUID, payload: DeleteRequest):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to delete order",
         )
+    # If a student had reserved it, drop it from their reservations too
+    for s in system.student_list:
+        if order.order_id in s.reserved_orders:
+            s.reserved_orders.remove(order.order_id)
     return {"message": "Order deleted successfully", "order_id": order.order_id}

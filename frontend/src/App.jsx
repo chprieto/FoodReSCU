@@ -4,7 +4,7 @@ import lockup from './assets/scu-lockup.png'
 import SignIn from './components/SignIn'
 import OrderCard from './components/OrderCard'
 import { useNow, useOrders } from './hooks'
-import { pickUpOrder, reserveOrder } from './api'
+import { deleteOrder, pickUpOrder, reserveOrder } from './api'
 import { STATUS, uiStatus } from './orderStatus'
 
 // v2: sessions saved before the backend validated logins are dropped, so everyone signs in again.
@@ -37,13 +37,13 @@ function Dashboard({ user, onSignOut }) {
   const [busyId, setBusyId] = useState(null)
   const [actionError, setActionError] = useState(null)
 
-  // Sends the action to the backend with the order id + the signed-in student's id,
-  // then reloads so the card moves to its new section.
+  // Sends the action to the backend with the order id + the signed-in user's id
+  // (student ID or staff ID), then reloads so the card moves to its new section.
   async function runAction(order, request) {
     setBusyId(order.order_id)
     setActionError(null)
     try {
-      await request(order.order_id, user.studentId)
+      await request(order.order_id, user.role === 'staff' ? user.staffId : user.studentId)
     } catch (err) {
       setActionError(err.message || 'Could not complete that action')
     } finally {
@@ -53,6 +53,9 @@ function Dashboard({ user, onSignOut }) {
   }
   const onReserve = (order) => runAction(order, reserveOrder)
   const onPickUp = (order) => runAction(order, pickUpOrder)
+  const onDelete = (order) => {
+    if (window.confirm(`Delete "${order.item}"? This can't be undone.`)) runAction(order, deleteOrder)
+  }
 
   const grouped = useMemo(() => {
     const groups = Object.fromEntries(SECTIONS.map((s) => [s.status, []]))
@@ -187,6 +190,7 @@ function Dashboard({ user, onSignOut }) {
                       busy={busyId === order.order_id}
                       onReserve={onReserve}
                       onPickUp={onPickUp}
+                      onDelete={onDelete}
                     />
                   ))}
                 </ul>

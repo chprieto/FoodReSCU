@@ -52,6 +52,11 @@ export function pickUpOrder(orderId, studentId) {
   return postJson(`/orders/${orderId}/pickup`, { student_id: studentId })
 }
 
+/** Staff permanently removes an order. Sends the order id and which staff member did it. */
+export function deleteOrder(orderId, staffId) {
+  return postJson(`/orders/${orderId}/delete`, { staff_id: staffId })
+}
+
 /**
  * Fetches the orders this user is allowed to see, as one flat list.
  *
