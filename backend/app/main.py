@@ -240,7 +240,7 @@ def create_order_endpoint(payload: CreateRequest):
             detail=f"Staff with ID '{payload.staff_id}' not found",
         )
     # 2. Create the new order
-    order_age = payload.age_miuntes + (60 * payload.age_hours)
+    order_age = payload.age_minutes + (60 * payload.age_hours)
     new_order = Order(item=payload.item, time_made = datetime.now() - timedelta(minutes=order_age))
     system.upcoming_list.add_order(new_order)
     return {"message": "Order created successfully", "order_id": new_order.order_id}
