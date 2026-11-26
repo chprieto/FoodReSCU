@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from system import System
 from order import Status, Order
@@ -40,6 +40,12 @@ class ActivateRequest(BaseModel):
 
 class DeleteRequest(BaseModel):
     staff_id: str
+
+class CreateRequest(BaseModel):
+    staff_id: str
+    item: str
+    age_hours: int = 0
+    age_minutes: int = 0
 
 system = System()
 student = system.add_student("student1", "password123", "STU001")
@@ -207,3 +213,34 @@ def delete_order_endpoint(order_id: uuid.UUID, payload: DeleteRequest):
         if order.order_id in s.reserved_orders:
             s.reserved_orders.remove(order.order_id)
     return {"message": "Order deleted successfully", "order_id": order.order_id}
+
+@app.post("/student/notify")
+def notify_student_endpoint(student_id: str):
+    # 1. Check if one of student's reserved orders is marked old
+    for order in system.old_list:
+        if order.reserved_by == student_id:
+    # 2. Create notification accordingly
+            return {
+                "needs_notif": True,
+                "order_id": order.order_id,
+                "message": "A previously reserved order has become old and is no longer available"
+            }
+    return {"needs_notif": False}
+
+@app.post("/staff/create_order")
+def create_order_endpoint(payload: CreateRequest):
+    # 1. Verify staff member
+    staff = next(
+        (s for s in system.staff_list if s.staff_id == payload.staff_id),
+        None,
+    )
+    if not staff:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Staff with ID '{payload.staff_id}' not found",
+        )
+    # 2. Create the new order
+    order_age = payload.age_miuntes + (60 * payload.age_hours)
+    new_order = Order(item=payload.item, time_made = datetime.now() - timedelta(minutes=order_age))
+    system.upcoming_list.add_order(new_order)
+    return {"message": "Order created successfully", "order_id": new_order.order_id}

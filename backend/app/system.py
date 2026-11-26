@@ -111,10 +111,8 @@ class System():
         self.make_old(self.upcoming_list)
         self.make_old(self.active_list)
         
-        reserved_orders = self.make_old(self.reserved_list)
-        for order in reserved_orders:
-            # notify student who reserved order!
-            pass
+        self.make_old(self.reserved_list)
+        #student notified by notify_student_endpoint in main
 
     def activate_due_orders(self):
         """Moves upcoming orders that have waited out ACTIVE_TIME into the active list
