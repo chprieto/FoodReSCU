@@ -28,6 +28,12 @@ class DeleteOrderRequest(BaseModel):
     """Payload sent by staff when deleting an order."""
     staff_id: str = Field(..., description="The unique ID of the staff member deleting the order")
 
+class CreateRequest(BaseModel):
+    staff_id: str
+    item: str
+    age_hours: int = 0
+    age_minutes: int = 0
+
 
 # Aliases for backward compatibility with previous main.py definitions
 ReserveRequest = ReserveOrderRequest

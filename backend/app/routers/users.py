@@ -121,3 +121,16 @@ def get_current_user_profile(
         role="staff",
         staff_id=user.staff_id,
     )
+
+@router.post("/student/notify")
+def notify_student_endpoint(student_id: str):
+    # 1. Check if one of student's reserved orders is marked old
+    for order in system.old_list:
+        if order.reserved_by == student_id:
+    # 2. Create notification accordingly
+            return {
+                "needs_notif": True,
+                "order_id": order.order_id,
+                "message": "A previously reserved order has become old and is no longer available"
+            }
+    return {"needs_notif": False}
