@@ -31,7 +31,7 @@ async function postJson(path, body) {
 export async function login({ role, id, password }) {
   let data
   try {
-    data = await postJson('/login', { role, id, password: role === 'staff' ? password : null })
+    data = await postJson('/users/login', { role, id, password: role === 'staff' ? password : null })
   } catch (err) {
     // A TypeError means the request never reached the backend.
     if (err instanceof TypeError) throw new Error('Can’t reach the server. Try again in a moment.')

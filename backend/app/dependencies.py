@@ -8,7 +8,7 @@ system = System()
 # Seed test data for development and testing
 student = system.add_student("student1", "password123", "STU001")
 system.add_student("student2", "password456", "STU002")
-staff = system.add_staff("staff1", "password123", "STAFF001")
+staff = system.add_staff("staff1", "staff123", "STAFF001")
 
 system.incoming_order("Burger")
 system.incoming_order("Pizza")

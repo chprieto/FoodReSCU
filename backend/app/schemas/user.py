@@ -13,9 +13,9 @@ class UserRegisterRequest(BaseModel):
 
 class UserLoginRequest(BaseModel):
     """Payload for user authentication."""
-    username: str = Field(..., min_length=1, description="Username")
-    password: str = Field(..., min_length=1, description="Password")
-    role: Literal["student", "staff"] = Field(..., description="Role of the user")
+    role: Literal["student", "staff"]
+    id: str
+    password: str | None = None  # required for staff, not used for students
 
 
 class UserProfileResponse(BaseModel):

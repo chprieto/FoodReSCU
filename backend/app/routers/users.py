@@ -66,39 +66,31 @@ def register_user(
         return {"message": "Staff registered successfully", "user": profile}
 
 
-@router.post("/login", response_model=AuthResponse)
+@router.post("/login")
 def login_user(
     payload: UserLoginRequest,
     system: System = Depends(get_system),
 ):
-    """Authenticate an existing user with username and password."""
-    target_list = system.student_list if payload.role == "student" else system.staff_list
-    user = next(
-        (u for u in target_list if u.username == payload.username and u.password == payload.password),
-        None,
-    )
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password.",
-        )
+    """Checks the ID (and, for staff, the password) against the registered users."""
+    user_id = payload.id.strip()
 
     if payload.role == "student":
-        profile = UserProfileResponse(
-            username=user.username,
-            role="student",
-            student_id=user.student_id,
-            reserved_orders=user.reserved_orders,
-        )
-    else:
-        profile = UserProfileResponse(
-            username=user.username,
-            role="staff",
-            staff_id=user.staff_id,
-        )
+        found = next((s for s in system.student_list if s.student_id == user_id), None)
+        if not found:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid student ID",
+            )
+        return {"role": "student", "student_id": found.student_id}
 
-    return {"message": "Login successful", "user": profile}
+    found = next((s for s in system.staff_list if s.staff_id == user_id), None)
+    if not found or found.password != payload.password:
+        # Same message for both so it doesn't reveal which staff IDs exist.
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid staff ID or password",
+        )
+    return {"role": "staff", "staff_id": found.staff_id}
 
 
 @router.get("/me", response_model=UserProfileResponse)
